@@ -1,17 +1,12 @@
 ---
 - hosts: multinode_gpu_droplets
+
   handlers:
     - name: run netplan apply
       become: true
       ansible.builtin.command: netplan apply
+
   tasks:
-    - name: read /etc/netplan/50-cloud-init.yaml
-      slurp:
-        path: /etc/netplan/50-cloud-init.yaml
-      register: netplan_encoded
-    - name: extract /etc/netplan/50-cloud-init.yaml
-      set_fact:
-        netplan: '{{ netplan_encoded[''content''] | b64decode | from_yaml }}'
     # https://stackoverflow.com/questions/70702265/how-can-i-index-the-number-of-hosts-in-play-based-on-a-variable
     - name: set a unique index for each droplet
       set_fact:
@@ -20,6 +15,21 @@
       loop: '{{ ansible_play_hosts_all }}'
       loop_control:
         index_var: hostidx
+
+    - name: install lldp
+      become: true
+      ansible.builtin.apt:
+        name: lldpd
+        update_cache: yes
+
+    # https://stackoverflow.com/questions/32994002/is-there-a-yaml-editing-module-for-ansible
+    - name: read /etc/netplan/50-cloud-init.yaml
+      slurp:
+        path: /etc/netplan/50-cloud-init.yaml
+      register: netplan_encoded
+    - name: extract /etc/netplan/50-cloud-init.yaml
+      set_fact:
+        netplan: '{{ netplan_encoded[''content''] | b64decode | from_yaml }}'
     - name: adjust /etc/netplan/50-cloud-init.yaml
       set_fact:
         netplan: '{{ netplan | combine(new_netplan, recursive=True) }}'
@@ -90,8 +100,3 @@
         dest: /etc/netplan/50-cloud-init.yaml
       notify:
         - run netplan apply
-    - name: install lldp
-      become: true
-      ansible.builtin.apt:
-        name: lldpd
-        update_cache: yes
