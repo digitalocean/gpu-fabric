@@ -1,0 +1,5 @@
+[multinode_gpu_droplets]
+10.10.10.10
+
+[multinode_gpu_droplets:vars]
+ansible_user=root

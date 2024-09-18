@@ -1,0 +1,97 @@
+---
+- hosts: multinode_gpu_droplets
+  handlers:
+    - name: run netplan apply
+      become: true
+      ansible.builtin.command: netplan apply
+  tasks:
+    - name: read /etc/netplan/50-cloud-init.yaml
+      slurp:
+        path: /etc/netplan/50-cloud-init.yaml
+      register: netplan_encoded
+    - name: extract /etc/netplan/50-cloud-init.yaml
+      set_fact:
+        netplan: '{{ netplan_encoded[''content''] | b64decode | from_yaml }}'
+    # https://stackoverflow.com/questions/70702265/how-can-i-index-the-number-of-hosts-in-play-based-on-a-variable
+    - name: set a unique index for each droplet
+      set_fact:
+        fourth_octet: '{{ hostidx + 2 }}'
+      when: inventory_hostname == item
+      loop: '{{ ansible_play_hosts_all }}'
+      loop_control:
+        index_var: hostidx
+    - name: adjust /etc/netplan/50-cloud-init.yaml
+      set_fact:
+        netplan: '{{ netplan | combine(new_netplan, recursive=True) }}'
+      vars:
+        new_netplan:
+          network:
+            ethernets:
+              eth2:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.50.{{ fourth_octet }}/24
+                mtu: 4200
+              eth3:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.51.{{ fourth_octet }}/24
+                mtu: 4200
+              eth4:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.52.{{ fourth_octet }}/24
+                mtu: 4200
+              eth5:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.53.{{ fourth_octet }}/24
+                mtu: 4200
+              eth6:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.54.{{ fourth_octet }}/24
+                mtu: 4200
+              eth7:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.55.{{ fourth_octet }}/24
+                mtu: 4200
+              eth8:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.56.{{ fourth_octet }}/24
+                mtu: 4200
+              eth9:
+                dhcp4: false
+                dhcp6: false
+                link-local: []
+                addresses:
+                  - 192.168.57.{{ fourth_octet }}/24
+                mtu: 4200
+    - name: write /etc/netplan/50-cloud-init.yaml
+      become: true
+      copy:
+        content: '{{ netplan | to_nice_yaml }}'
+        dest: /etc/netplan/50-cloud-init.yaml
+      notify:
+        - run netplan apply
+    - name: install lldp
+      become: true
+      ansible.builtin.apt:
+        name: lldpd
+        update_cache: yes
