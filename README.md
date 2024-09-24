@@ -1,5 +1,21 @@
 # gpu-fabric
-Simple Ansible playbook to configure GPU droplets
+Simple Ansible playbook to configure GPU droplets.
+
+# Pre-requisites
+
+This procedure assumes you have familiary with Ansible and have Ansible available on the machine that you
+will use to run the following command. For instructions on how to make Ansible available on this device,
+please refer to the Ansible [installation guide](https://docs.ansible.com/ansible/latest/installation_guide/index.html).
+
+It is also worth noting that Ansible uses ssh under the hood to configure your droplets. If you have never
+ssh'ed into your droplets, and you do not have `StrictHostKeyChecking no` in your `.ssh/config` file, you can
+add the following:
+
+```
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+```
+
+At the bottom of the `inventory/droplets` file.
 
 # how-to
 
