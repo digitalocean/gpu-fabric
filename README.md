@@ -1,59 +1,49 @@
-# gpu-fabric
-Simple Ansible playbook to configure GPU droplets.
+This repository contains a simple Ansible playbook to configure multi-node GPU Droplets.
 
-# Pre-requisites
+To use this playbook:
 
-This procedure assumes you have familiary with Ansible and have Ansible available on the machine that you
-will use to run the following command. For instructions on how to make Ansible available on this device,
-please refer to the Ansible [installation guide](https://docs.ansible.com/ansible/latest/installation_guide/index.html).
+1. On the machine that you will use to run this playbook, first [install Ansible](https://docs.ansible.com/ansible/latest/installation_guide/index.html) and then [clone this repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
 
-It is also worth noting that Ansible uses ssh under the hood to configure your droplets. If you have never
-ssh'ed into your droplets, and you do not have `StrictHostKeyChecking no` in your `.ssh/config` file, you can
-add the following:
+2. In the `inventory/droplets` file in your cloned version of this repository, in the `[multinode_gpu_droplets]` section, specify the public IP addresses of your GPU Droplets.
+
+3. Ansible uses SSH under the hood to configure Droplets. If you have never connected to your Droplets with SSH and the `.ssh/config` file on your machine does not include `StrictHostKeyChecking no`, add the following line to the `inventory/droplets` file:
 
 ```
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ```
 
-At the bottom of the `inventory/droplets` file.
-
-# how-to
-
-Edit the `droplets` file under the `inventory` directory to specify the list of droplet's public addresses
-under the `[multinode_gpu_droplets]` section. Leave the rest unchanged, save and close the file.
-
-After that, run the following command:
+4. Save the file, then run the playbook from the root of the repository:
 
 ```
 ansible-playbook -i inventory/droplets customer-play.yaml
 ```
 
-With success you should see the following similar output:
+The output of a successful run looks similar to the following:
 
 ```
-PLAY [multinode_gpu_droplets] *************************************************************************************************************************************************************************************************************************
+PLAY [multinode_gpu_droplets] ***********************************************************************************
 
-TASK [Gathering Facts] ********************************************************************************************************************************************************************************************************************************
+TASK [Gathering Facts] ******************************************************************************************
 ok: [10.10.10.10]
 
-TASK [read /etc/netplan/50-cloud-init.yaml] ***********************************************************************************************************************************************************************************************************
+TASK [read /etc/netplan/50-cloud-init.yaml] *********************************************************************
 ok: [10.10.10.10]
 
-TASK [extract /etc/netplan/50-cloud-init.yaml] ********************************************************************************************************************************************************************************************************
+TASK [extract /etc/netplan/50-cloud-init.yaml] ******************************************************************
 ok: [10.10.10.10]
 
-TASK [set a unique index for each droplet] ************************************************************************************************************************************************************************************************************
+TASK [set a unique index for each droplet] **********************************************************************
 ok: [10.10.10.10] => (item=10.10.10.10)
 
-TASK [adjust /etc/netplan/50-cloud-init.yaml] *********************************************************************************************************************************************************************************************************
+TASK [adjust /etc/netplan/50-cloud-init.yaml] *******************************************************************
 ok: [10.10.10.10]
 
-TASK [write /etc/netplan/50-cloud-init.yaml] **********************************************************************************************************************************************************************************************************
+TASK [write /etc/netplan/50-cloud-init.yaml] ********************************************************************
 ok: [10.10.10.10]
 
-TASK [install lldp] ***********************************************************************************************************************************************************************************************************************************
+TASK [install lldp] *********************************************************************************************
 ok: [10.10.10.10]
 
-PLAY RECAP ********************************************************************************************************************************************************************************************************************************************
+PLAY RECAP ******************************************************************************************************
 10.10.10.10             : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ```
