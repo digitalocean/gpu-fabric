@@ -1,3 +1,4 @@
+# Copyright DigitalOcean LLC 2024
 ---
 - hosts: multinode_gpu_droplets
 
