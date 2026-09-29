@@ -23,6 +23,47 @@
         name: lldpd
         update_cache: yes
 
+    - name: discover GPU fabric NICs
+      become: true
+      ansible.builtin.shell: |
+        set -o pipefail
+        for d in /sys/class/net/*; do
+          n=$(basename "$d")
+          [ "$n" = lo ] && continue
+          drv=$(basename "$(readlink -f "$d/device/driver" 2>/dev/null)" 2>/dev/null)
+          case "$drv" in ionic|mlx5_core) ;; *) continue ;; esac
+          pci=$(basename "$(readlink -f "$d/device" 2>/dev/null)")
+          echo "$pci $n"
+        done | sort | awk '{print $2}'
+      args:
+        executable: /bin/bash
+      register: fabric_nics
+      changed_when: false
+
+    - name: fail if no fabric NICs were found
+      ansible.builtin.assert:
+        that: fabric_nics.stdout_lines | length > 0
+        fail_msg: >-
+          No fabric NICs found. Looked for devices bound to ionic (AMD) or mlx5_core
+          (NVIDIA). Check that this host is a multi-node GPU Droplet and that the
+          fabric drivers are loaded.
+
+    - name: build fabric NIC netplan config
+      set_fact:
+        fabric_ethernets: >-
+          {{ fabric_ethernets | default({}) | combine({
+               item: {
+                 'dhcp4': false,
+                 'dhcp6': false,
+                 'link-local': [],
+                 'addresses': ['192.168.' ~ (50 + idx) ~ '.' ~ fourth_octet ~ '/24'],
+                 'mtu': 4200
+               }
+             }) }}
+      loop: '{{ fabric_nics.stdout_lines }}'
+      loop_control:
+        index_var: idx
+
     # https://stackoverflow.com/questions/32994002/is-there-a-yaml-editing-module-for-ansible
     - name: read /etc/netplan/50-cloud-init.yaml
       slurp:
@@ -33,67 +74,7 @@
         netplan: '{{ netplan_encoded[''content''] | b64decode | from_yaml }}'
     - name: adjust /etc/netplan/50-cloud-init.yaml
       set_fact:
-        netplan: '{{ netplan | combine(new_netplan, recursive=True) }}'
-      vars:
-        new_netplan:
-          network:
-            ethernets:
-              eth2:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.50.{{ fourth_octet }}/24
-                mtu: 4200
-              eth3:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.51.{{ fourth_octet }}/24
-                mtu: 4200
-              eth4:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.52.{{ fourth_octet }}/24
-                mtu: 4200
-              eth5:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.53.{{ fourth_octet }}/24
-                mtu: 4200
-              eth6:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.54.{{ fourth_octet }}/24
-                mtu: 4200
-              eth7:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.55.{{ fourth_octet }}/24
-                mtu: 4200
-              eth8:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.56.{{ fourth_octet }}/24
-                mtu: 4200
-              eth9:
-                dhcp4: false
-                dhcp6: false
-                link-local: []
-                addresses:
-                  - 192.168.57.{{ fourth_octet }}/24
-                mtu: 4200
+        netplan: '{{ netplan | combine({"network": {"ethernets": fabric_ethernets}}, recursive=True) }}'
     - name: write /etc/netplan/50-cloud-init.yaml
       become: true
       copy:
